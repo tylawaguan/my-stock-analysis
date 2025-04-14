@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartStock - Inventory Manager</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #00bfff, #87cefa, #1e90ff);
+      color: #333;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 30px;
+      background-color: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    h2, h3 {
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    .form-section {
+      margin-bottom: 30px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 14px;
+      border: 1px solid #ddd;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #ecf0f1;
+      color: #34495e;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    tr:hover {
+      background-color: #f1c40f;
+    }
+
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: #16a085;
+      min-width: 160px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      z-index: 1;
+      border-radius: 6px;
+    }
+
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+
+    .dropdown-content button {
+      background-color: #16a085;
+      border: 1px solid #ddd;
+      padding: 10px;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      border-radius: 6px;
+      color: white;
+    }
+
+    .dropdown-content button:hover {
+      background-color: #1abc9c;
+    }
+
+    .dropdown-button {
+      background-color: #9b59b6;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .dropdown-button:hover {
+      background-color: #8e44ad;
+    }
+
+    .history-table {
+      margin-top: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      background-color: #fff;
+    }
+
+    .history-table th, .history-table td {
+      text-align: left;
+      padding: 12px;
+    }
+
+    .history-table th {
+      background-color: #ecf0f1;
+    }
+
+    .history-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    .history-table tr:hover {
+      background-color: #f39c12;
+    }
+
+    #search-box {
+      padding: 12px;
+      border: 2px solid #3498db;
+      border-radius: 6px;
+      width: 100%;
+      font-size: 16px;
+      margin-top: 20px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.05);
+    }
+
+    @media (max-width: 600px) {
+      th, td {
+        font-size: 14px;
+      }
+
+      input, select, button {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>SmartStock</h2>
+    <h3>Unified Inventory Actions</h3>
+
+    <!-- Add/Edit Product Form -->
+    <div class="form-section">
+      <input type="text" id="product-name" placeholder="Product Name" />
+      <input type="text" id="product-category" placeholder="Category" />
+      <input type="number" id="product-qty" placeholder="Quantity" />
+      <input type="date" id="product-expiry" placeholder="Expiry Date" />
+      <div class="btn-row">
+        <button onclick="addOrUpdateProduct()">Add / Update</button>
+      </div>
+    </div>
+
+    <input type="text" id="search-box" placeholder="🔍 Search by Product Name..." oninput="filterProducts()" />
+
+    <!-- Product Table -->
+    <div>
+      <h3>Current Inventory</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Qty</th>
+            <th>Expiry</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="product-table"></tbody>
+      </table>
+    </div>
+
+    <div>
+      <h3>Adjustment History</h3>
+      <div class="history-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Product</th>
+              <th>Qty</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="history-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let products = JSON.parse(localStorage.getItem("smartstock-products") || "[]");
+    let history = JSON.parse(localStorage.getItem("smartstock-history") || "[]");
+    let editingIndex = null;
+
+    function saveData() {
+      localStorage.setItem("smartstock-products", JSON.stringify(products));
+      localStorage.setItem("smartstock-history", JSON.stringify(history));
+    }
+
+    function getInputValues() {
+      return {
+        name: document.getElementById('product-name').value.trim(),
+        category: document.getElementById('product-category').value.trim(),
+        qty: parseInt(document.getElementById('product-qty').value),
+        expiry: document.getElementById('product-expiry').value
+      };
+    }
+
+    function addOrUpdateProduct() {
+      const { name, category, qty, expiry } = getInputValues();
+      if (!name || !category || isNaN(qty)) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      const existingProductIndex = products.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+
+      if (existingProductIndex !== -1) {
+        products[existingProductIndex] = { name, category, qty, expiry };
+        alert("Product updated successfully!");
+      } else {
+        products.push({ name, category, qty, expiry });
+        alert("New product added successfully!");
+      }
+
+      saveData();
+      clearForm();
+      renderProducts();
+    }
+
+    function renderProducts() {
+      const table = document.getElementById('product-table');
+      const searchValue = document.getElementById('search-box').value.toLowerCase();
+      table.innerHTML = '';
+
+      products.forEach((p, index) => {
+        if (p.name.toLowerCase().includes(searchValue)) {
+          table.innerHTML += `
+            <tr>
+              <td>${p.name}</td>
+              <td>${p.category}</td>
+              <td>${p.qty}</td>
+              <td>${p.expiry || '-'}</td>
+              <td>
+                <div class="dropdown">
+                  <button class="dropdown-button">Actions</button>
+                  <div class="dropdown-content">
+                    <button onclick="editProduct(${index})">Edit</button>
+                    <button onclick="deleteProduct(${index})">Delete</button>
+                    <button onclick="promptAdjustmentIn(${index})">Adjustment In</button>
+                    <button onclick="promptAdjustmentOut(${index})">Adjustment Out</button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          `;
+        }
+      });
+    }
+
+    function clearForm() {
+      document.getElementById('product-name').value = '';
+      document.getElementById('product-category').value = '';
+      document.getElementById('product-qty').value = '';
+      document.getElementById('product-expiry').value = '';
+    }
+
+    function editProduct(index) {
+      const p = products[index];
+      document.getElementById('product-name').value = p.name;
+      document.getElementById('product-category').value = p.category;
+      document.getElementById('product-qty').value = p.qty;
+      document.getElementById('product-expiry').value = p.expiry;
+      editingIndex = index;
+    }
+
+    function deleteProduct(index) {
+      if (confirm("Delete this product?")) {
+        products.splice(index, 1);
+        saveData();
+        renderProducts();
+      }
+    }
+
+    function promptAdjustmentIn(index) {
+      const qty = parseInt(prompt("Enter quantity to adjust in:"));
+      if (isNaN(qty) || qty <= 0) {
+        alert("Invalid quantity.");
+        return;
+      }
+      products[index].qty += qty;
+
+      history.push({
+        type: "Adjustment In",
+        name: products[index].name,
+        qty,
+        date: new Date().toLocaleString()
+      });
+
+      saveData();
+      renderProducts();
+      renderHistory();
+    }
+
+    function promptAdjustmentOut(index) {
+      const qty = parseInt(prompt("Enter quantity to adjust out:"));
+      if (isNaN(qty) || qty <= 0) {
+        alert("Invalid quantity.");
+        return;
+      }
+
+      if (products[index].qty < qty) {
+        alert("Not enough stock.");
+        return;
+      }
+
+      products[index].qty -= qty;
+
+      history.push({
+        type: "Adjustment Out",
+        name: products[index].name,
+        qty,
+        date: new Date().toLocaleString()
+      });
+
+      saveData();
+      renderProducts();
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const table = document.getElementById('history-table');
+      table.innerHTML = '';
+      history.slice().reverse().forEach(entry => {
+        table.innerHTML += `
+          <tr>
+            <td>${entry.type}</td>
+            <td>${entry.name}</td>
+            <td>${entry.qty}</td>
+            <td>${entry.date}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function filterProducts() {
+      renderProducts();
+    }
+
+    window.onload = () => {
+      renderProducts();
+      renderHistory();
+    };
+  </script>
+</body>
+</html>
